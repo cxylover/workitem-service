@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作项详情</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <h1><a href="/">工作项管理系统</a></h1>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h2>工作项详情</h2>
+            <a href="/" class="btn">返回列表</a>
+        </div>
+
+        <div class="detail-grid">
+            <!-- 左侧：工作项信息 -->
+            <div>
+                <!-- 基本信息 -->
+                <div class="card" id="workItemInfo">
+                    <div class="card-header">
+                        <h3>基本信息</h3>
+                        <span class="badge" id="statusBadge">-</span>
+                    </div>
+                    <div class="detail-info">
+                        <div>
+                            <div class="info-label">ID</div>
+                            <div class="info-value" id="itemId">-</div>
+                        </div>
+                        <div>
+                            <div class="info-label">标题</div>
+                            <div class="info-value" id="itemTitle">-</div>
+                        </div>
+                        <div>
+                            <div class="info-label">类型</div>
+                            <div class="info-value" id="itemType">-</div>
+                        </div>
+                        <div>
+                            <div class="info-label">优先级</div>
+                            <div class="info-value" id="itemPriority">-</div>
+                        </div>
+                        <div>
+                            <div class="info-label">负责人</div>
+                            <div class="info-value" id="itemAssignee">-</div>
+                        </div>
+                        <div>
+                            <div class="info-label">风险等级</div>
+                            <div class="info-value" id="itemRiskLevel">-</div>
+                        </div>
+                        <div>
+                            <div class="info-label">创建时间</div>
+                            <div class="info-value" id="itemCreatedAt">-</div>
+                        </div>
+                        <div>
+                            <div class="info-label">更新时间</div>
+                            <div class="info-value" id="itemUpdatedAt">-</div>
+                        </div>
+                        <div class="full-width">
+                            <div class="info-label">描述</div>
+                            <div class="info-value" id="itemDescription">-</div>
+                        </div>
+                        <div class="full-width">
+                            <div class="info-label">标签</div>
+                            <div class="info-value" id="itemTags">-</div>
+                        </div>
+                        <div class="full-width">
+                            <div class="info-label">验收标准</div>
+                            <div class="info-value" id="itemAcceptanceCriteria">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 状态流转 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>状态流转</h3>
+                    </div>
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                        <select class="form-control" style="width: auto;" id="targetStatus">
+                            <option value="">选择目标状态</option>
+                        </select>
+                        <input type="text" class="form-control" style="width: 200px;" id="transitionReason" placeholder="流转原因（可选）">
+                        <button class="btn btn-primary" onclick="handleTransition()">执行流转</button>
+                    </div>
+                </div>
+
+                <!-- 澄清问题 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>澄清问题</h3>
+                        <button class="btn btn-primary btn-sm" onclick="showAddClarificationModal()">新增问题</button>
+                    </div>
+                    <div id="clarificationList">
+                        <p class="loading">加载中...</p>
+                    </div>
+                </div>
+
+                <!-- AI 分析 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>AI 分析</h3>
+                    </div>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <select class="form-control" style="width: auto;" id="analysisType">
+                            <option value="SUMMARY">需求摘要</option>
+                            <option value="ACCEPTANCE_CRITERIA">验收标准</option>
+                            <option value="RISK">风险识别</option>
+                            <option value="QUESTIONS">澄清问题</option>
+                            <option value="TASK_BREAKDOWN">任务拆解</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="handleAnalyze()">执行分析</button>
+                    </div>
+                    <div id="analysisResult">
+                        <p class="empty-state">点击"执行分析"开始 AI 分析</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：状态历史 -->
+            <div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3>状态历史</h3>
+                    </div>
+                    <div id="historyList">
+                        <p class="loading">加载中...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增澄清问题模态框 -->
+    <div class="modal" id="addClarificationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>新增澄清问题</h3>
+                <button class="modal-close" onclick="closeAddClarificationModal()">&times;</button>
+            </div>
+            <form id="addClarificationForm" onsubmit="handleAddClarification(event)">
+                <div class="form-group">
+                    <label for="questionContent">问题内容 *</label>
+                    <textarea class="form-control" id="questionContent" name="content" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="questionSeverity">严重程度 *</label>
+                    <select class="form-control" id="questionSeverity" name="severity" required>
+                        <option value="HIGH">高</option>
+                        <option value="MEDIUM">中</option>
+                        <option value="LOW">低</option>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
+                    <button type="button" class="btn" onclick="closeAddClarificationModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 解决澄清问题模态框 -->
+    <div class="modal" id="resolveClarificationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>解决澄清问题</h3>
+                <button class="modal-close" onclick="closeResolveClarificationModal()">&times;</button>
+            </div>
+            <form id="resolveClarificationForm" onsubmit="handleResolveClarification(event)">
+                <input type="hidden" id="resolveQuestionId">
+                <div class="form-group">
+                    <label for="questionAnswer">回答 *</label>
+                    <textarea class="form-control" id="questionAnswer" name="answer" required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
+                    <button type="button" class="btn" onclick="closeResolveClarificationModal()">取消</button>
+                    <button type="submit" class="btn btn-success">标记为已解决</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        // 当前工作项 ID
+        let currentWorkItemId = null;
+
+        // 页面加载时获取工作项详情
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            currentWorkItemId = params.get('id');
+
+            if (!currentWorkItemId) {
+                Utils.showToast('缺少工作项 ID', 'error');
+                return;
+            }
+
+            loadWorkItemDetail();
+            loadAllowedTransitions();
+            loadClarifications();
+            loadHistory();
+        });
+
+        /**
+         * 加载工作项详情
+         */
+        async function loadWorkItemDetail() {
+            try {
+                const response = await API.workItems.getById(currentWorkItemId);
+                const item = response.data;
+
+                document.getElementById('itemId').textContent = item.id;
+                document.getElementById('itemTitle').textContent = item.title;
+                document.getElementById('itemType').textContent = Utils.getTypeText(item.type);
+                document.getElementById('itemPriority').innerHTML = `<span class="${Utils.getPriorityClass(item.priority)}">${item.priority}</span>`;
+                document.getElementById('itemAssignee').textContent = item.assignee || '-';
+                document.getElementById('itemDescription').textContent = item.description || '-';
+                document.getElementById('itemAcceptanceCriteria').textContent = item.acceptanceCriteria || '-';
+                document.getElementById('itemCreatedAt').textContent = Utils.formatDate(item.createdAt);
+                document.getElementById('itemUpdatedAt').textContent = Utils.formatDate(item.updatedAt);
+
+                // 风险等级
+                const riskLevel = item.riskLevel ? Utils.getSeverityText(item.riskLevel) : '-';
+                document.getElementById('itemRiskLevel').textContent = riskLevel;
+
+                // 标签
+                const tags = Utils.parseTags(item.tags);
+                const tagsHtml = tags.length > 0
+                    ? tags.map(t => `<span class="tag">${t}</span>`).join('')
+                    : '-';
+                document.getElementById('itemTags').innerHTML = tagsHtml;
+
+                // 状态
+                const statusBadge = document.getElementById('statusBadge');
+                statusBadge.textContent = Utils.getStatusText(item.status);
+                statusBadge.className = `badge ${Utils.getStatusClass(item.status)}`;
+            } catch (error) {
+                Utils.showToast(error.message, 'error');
+            }
+        }
+
+        /**
+         * 加载允许的状态流转
+         */
+        async function loadAllowedTransitions() {
+            try {
+                const response = await API.workItems.getAllowedTransitions(currentWorkItemId);
+                const allowed = response.data;
+                const select = document.getElementById('targetStatus');
+
+                select.innerHTML = '<option value="">选择目标状态</option>';
+                allowed.forEach(status => {
+                    select.innerHTML += `<option value="${status}">${Utils.getStatusText(status)}</option>`;
+                });
+            } catch (error) {
+                console.error('加载允许状态失败:', error);
+            }
+        }
+
+        /**
+         * 加载澄清问题
+         */
+        async function loadClarifications() {
+            const container = document.getElementById('clarificationList');
+
+            try {
+                const response = await API.clarifications.list(currentWorkItemId);
+                const questions = response.data;
+
+                if (questions.length === 0) {
+                    container.innerHTML = '<p class="empty-state">暂无澄清问题</p>';
+                    return;
+                }
+
+                container.innerHTML = questions.map(q => `
+                    <div style="padding: 1rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <div style="margin-bottom: 0.5rem;">
+                                <span class="badge ${Utils.getSeverityClass(q.severity)}">${Utils.getSeverityText(q.severity)}</span>
+                                <span class="badge ${q.status === 'RESOLVED' ? 'badge-completed' : 'badge-draft'}">
+                                    ${q.status === 'RESOLVED' ? '已解决' : '未解决'}
+                                </span>
+                            </div>
+                            <div>${q.content}</div>
+                            ${q.answer ? `<div style="color: #666; margin-top: 0.5rem;">回答: ${q.answer}</div>` : ''}
+                        </div>
+                        ${q.status === 'UNRESOLVED' ? `
+                            <button class="btn btn-success btn-sm" onclick="showResolveClarificationModal(${q.id})">解决</button>
+                        ` : ''}
+                    </div>
+                `).join('');
+            } catch (error) {
+                container.innerHTML = `<p class="empty-state">加载失败: ${error.message}</p>`;
+            }
+        }
+
+        /**
+         * 加载状态历史
+         */
+        async function loadHistory() {
+            const container = document.getElementById('historyList');
+
+            try {
+                const response = await API.workItems.getHistory(currentWorkItemId);
+                const history = response.data;
+
+                if (history.length === 0) {
+                    container.innerHTML = '<p class="empty-state">暂无状态变更记录</p>';
+                    return;
+                }
+
+                container.innerHTML = history.map(h => `
+                    <div style="padding: 0.75rem 0; border-bottom: 1px solid #eee;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                            <span class="badge ${Utils.getStatusClass(h.fromStatus)}">${Utils.getStatusText(h.fromStatus)}</span>
+                            <span>→</span>
+                            <span class="badge ${Utils.getStatusClass(h.toStatus)}">${Utils.getStatusText(h.toStatus)}</span>
+                        </div>
+                        <div style="font-size: 0.85rem; color: #666;">
+                            ${h.changedBy ? `操作人: ${h.changedBy} | ` : ''}
+                            ${Utils.formatDate(h.changedAt)}
+                            ${h.reason ? ` | 原因: ${h.reason}` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                container.innerHTML = `<p class="empty-state">加载失败: ${error.message}</p>`;
+            }
+        }
+
+        /**
+         * 处理状态流转
+         */
+        async function handleTransition() {
+            const targetStatus = document.getElementById('targetStatus').value;
+            const reason = document.getElementById('transitionReason').value;
+
+            if (!targetStatus) {
+                Utils.showToast('请选择目标状态', 'error');
+                return;
+            }
+
+            try {
+                await API.workItems.transition(currentWorkItemId, {
+                    targetStatus,
+                    reason,
+                    changedBy: 'candidate'
+                });
+                Utils.showToast('状态流转成功');
+                loadWorkItemDetail();
+                loadAllowedTransitions();
+                loadHistory();
+                document.getElementById('transitionReason').value = '';
+            } catch (error) {
+                Utils.showToast(error.message, 'error');
+            }
+        }
+
+        /**
+         * 显示新增澄清问题模态框
+         */
+        function showAddClarificationModal() {
+            document.getElementById('addClarificationModal').classList.add('active');
+        }
+
+        /**
+         * 关闭新增澄清问题模态框
+         */
+        function closeAddClarificationModal() {
+            document.getElementById('addClarificationModal').classList.remove('active');
+            document.getElementById('addClarificationForm').reset();
+        }
+
+        /**
+         * 处理新增澄清问题
+         */
+        async function handleAddClarification(event) {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const data = {
+                content: formData.get('content'),
+                severity: formData.get('severity')
+            };
+
+            try {
+                await API.clarifications.create(currentWorkItemId, data);
+                Utils.showToast('澄清问题创建成功');
+                closeAddClarificationModal();
+                loadClarifications();
+            } catch (error) {
+                Utils.showToast(error.message, 'error');
+            }
+        }
+
+        /**
+         * 显示解决澄清问题模态框
+         */
+        function showResolveClarificationModal(questionId) {
+            document.getElementById('resolveQuestionId').value = questionId;
+            document.getElementById('resolveClarificationModal').classList.add('active');
+        }
+
+        /**
+         * 关闭解决澄清问题模态框
+         */
+        function closeResolveClarificationModal() {
+            document.getElementById('resolveClarificationModal').classList.remove('active');
+            document.getElementById('resolveClarificationForm').reset();
+        }
+
+        /**
+         * 处理解决澄清问题
+         */
+        async function handleResolveClarification(event) {
+            event.preventDefault();
+
+            const questionId = document.getElementById('resolveQuestionId').value;
+            const answer = document.getElementById('questionAnswer').value;
+
+            try {
+                await API.clarifications.update(currentWorkItemId, questionId, {
+                    status: 'RESOLVED',
+                    answer
+                });
+                Utils.showToast('澄清问题已解决');
+                closeResolveClarificationModal();
+                loadClarifications();
+            } catch (error) {
+                Utils.showToast(error.message, 'error');
+            }
+        }
+
+        /**
+         * 处理 AI 分析
+         */
+        async function handleAnalyze() {
+            const analysisType = document.getElementById('analysisType').value;
+            const container = document.getElementById('analysisResult');
+
+            container.innerHTML = '<p class="loading">分析中...</p>';
+
+            try {
+                const response = await API.analysis.analyze(currentWorkItemId, analysisType);
+                const result = response.data;
+
+                // 解析 JSON 结果
+                let parsedResult;
+                try {
+                    parsedResult = JSON.parse(result.result);
+                } catch {
+                    parsedResult = result.result;
+                }
+
+                container.innerHTML = `
+                    <div class="analysis-result">
+                        <h4 style="margin-bottom: 1rem;">分析结果</h4>
+                        <pre>${JSON.stringify(parsedResult, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                container.innerHTML = `<p class="empty-state">分析失败: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
